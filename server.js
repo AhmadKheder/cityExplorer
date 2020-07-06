@@ -42,19 +42,45 @@ app.get('/location', (req, res) => {
 function Location(location, locationInfoJSON) {
 
     //properties to send as response 
-    
+
     this.search_query = location;
     this.formatted_query = locationInfoJSON[0].display_name;
     this.latitude = locationInfoJSON[0].lat;
     this.longitude = locationInfoJSON[0].lon;
 
 }
+
+app.get('/weather', (req, res) => {
+    //grab the weather json obj
+    const weatherData = require('./data/weather.json');
+    // new Weather(weatherData);
+    let arrOfObj = [];
+    weatherData.data.forEach((day)=>{
+        let describtion = day.weather.description;
+        let date = day.datetime;
+        arrOfObj.push(new Weather(describtion,date));
+
+    });
+    res.send(arrOfObj);
+
+});
+function Weather(describtion,date) {
+    //properties
+    this.forecast = describtion;
+    this.time = new Date(date).toDateString();
+}
+
 app.get('/', (req, res) => {
     res.send('HI');
 });
 
 app.get('*', (req, res) => {
-    res.status(404).send('NOT FOUND');
+    let obj = {
+        status: 500,
+        responseText: "Sorry, something went wrong",
+        
+      }
+    res.status(404).send(obj);
 })
 
 //Hey server, listen to the port PORT and (req,res)=>{...}
