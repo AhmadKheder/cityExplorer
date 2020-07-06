@@ -75,14 +75,19 @@ app.get('/', (req, res) => {
     res.send('HI');
 });
 
+
 app.get('*', (req, res) => {
-    let obj = {
-        status: 500,
-        responseText: "Sorry, something went wrong",
-        
-      }
-    res.status(404).send(obj);
-})
+   
+    res.status(404).send('Not Found');
+});
+app.use((err,req,res)=>{
+    let errObj = {
+        status:500,
+        responseText:"Sorry, somthing went wrong",
+    }
+    res.status(500).send(errObj);
+});
+
 
 //Hey server, listen to the port PORT and (req,res)=>{...}
 app.listen(PORT, (req, res) => {
