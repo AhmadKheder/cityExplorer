@@ -70,6 +70,7 @@ function Weather(describtion,date) {
     this.time = new Date(date).toDateString();
 }
 
+
 app.get('/', (req, res) => {
     res.send('HI');
 });
