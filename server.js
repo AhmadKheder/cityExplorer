@@ -13,6 +13,11 @@ const cors = require('cors');
 //require and configure it 
 require('dotenv').config();
 
+const pg = require('pg');
+
+
+const client = new pg.Client(process.env.DATABASE_URL);
+
 // process : var process : Node.js Process ???
 //to give it an API key ,when?? 
 const PORT = process.env.PORT || 3040;//now I should the port in .env
@@ -24,21 +29,62 @@ app.use(cors());//the server/app is shared with everyone
 /* END OF SETTING UP THE SERVER */
 
 //quiries navigation
-
+// function errHandler(err, req, res) {
+//     res.status(500).json(err);
+// }
 app.get('/location', (req, res) => {
-    arrOfLocData = [];
+
     const loc = req.query.city;
     let key = process.env.GEOCODE_API_KEY;
 
-    let url = `https://eu1.locationiq.com/v1/search.php?key=${key}&city=${loc}&format=json`;
-    // https://eu1.locationiq.com/v1/search.php?key=c798db54cb9e1a&city=dubai&format=json
-    superagent.get(url)
-        .then((geoObj) => {
-            let locData = new Location(loc, geoObj.body);
-            res.status(200).json(locData);
-            console.log(arrOfLocData);
+    //select quey from db 
+    let SQL = `SELECT search_query,formatted_query,latitude,longitude FROM loc WHERE search_query = '${loc}'; `;
 
-        });
+    client.query(SQL)
+        .then((results) => {
+
+            if (results.rows.length > 0) {
+                console.log("DB QUERY 2");
+
+                res.status(200).json(results.rows[0]);
+            } else {
+                let url = `https://eu1.locationiq.com/v1/search.php?key=${key}&city=${loc}&format=json`
+                superagent.get(url)
+                    .then((geoObj) => {
+                        console.log("URL QUERY 1");
+
+                        let locData = new Location(loc, geoObj.body);
+                        let safeValues = [locData.search_query, locData.formatted_query, locData.latitude, locData.longitude];
+                        let insertSQL = `INSERT INTO loc(search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4);`
+                        client.query(insertSQL, safeValues)
+                            .then(results => {
+                                res.status(200).json(locData);
+                            });
+                        // res.status(200).json(locData);
+                        // console.log(arrOfLocData);
+
+                    });
+            }
+        }).catch((err) => {
+            console.log("CATCH ERROR HANDELED", err);
+            app.use((err, req, res) => {
+                console.log("INSID ERROR HANDELED");
+
+                res.status(500).json(err);
+            });
+        })
+    // .catch(err => errHandler(err));
+
+    arrOfLocData = [];
+
+    // let url = `https://eu1.locationiq.com/v1/search.php?key=${key}&city=${loc}&format=json`;
+    // superagent.get(url)
+    //     .then((geoObj) => {
+    //         let locData = new Location(loc, geoObj.body);
+    //         res.status(200).json(locData);
+    //         console.log(arrOfLocData);
+
+    //     });
 
 });
 let arrOfLocData = [];
@@ -119,19 +165,20 @@ app.get('*', (req, res) => {
     res.status(404).send('Not Found');
 });
 app.use((err, req, res) => {
-    let errObj = {
-        status: 500,
-        responseText: "Sorry, somthing went wrong",
-    }
-    res.status(500).send(errObj);
+
+    res.status(500).send(err);
 });
 
 
 //Hey server, listen to the port PORT and (req,res)=>{...}
-app.listen(PORT, (req, res) => {
-    console.log(`liddsssstening on port ${PORT}`)
-})
 
+client.connect()
+    .then(() => {
+        app.listen(PORT, (req, res) => {
+
+            console.log(`liddsssstening on port ${PORT}`)
+        })
+    })
 
 
 
