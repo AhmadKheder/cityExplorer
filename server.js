@@ -28,13 +28,13 @@ app.use(cors());//the server/app is shared with everyone
 
 /* END OF SETTING UP THE SERVER */
 
-//quiries navigation
-// function errHandler(err, req, res) {
-//     res.status(500).json(err);
-// }
+let arrOfLocData = [];//obi => location
+let loc;
+
+
 app.get('/location', (req, res) => {
 
-    const loc = req.query.city;
+    loc = req.query.city;
     let key = process.env.GEOCODE_API_KEY;
 
     //select quey from db 
@@ -60,12 +60,13 @@ app.get('/location', (req, res) => {
                             .then(results => {
                                 res.status(200).json(locData);
                             });
-                        // res.status(200).json(locData);
-                        // console.log(arrOfLocData);
+
 
                     });
             }
-        }).catch((err) => {
+
+        })
+        .catch((err) => {
             console.log("CATCH ERROR HANDELED", err);
             app.use((err, req, res) => {
                 console.log("INSID ERROR HANDELED");
@@ -73,27 +74,18 @@ app.get('/location', (req, res) => {
                 res.status(500).json(err);
             });
         })
-    // .catch(err => errHandler(err));
-
     arrOfLocData = [];
 
-    // let url = `https://eu1.locationiq.com/v1/search.php?key=${key}&city=${loc}&format=json`;
-    // superagent.get(url)
-    //     .then((geoObj) => {
-    //         let locData = new Location(loc, geoObj.body);
-    //         res.status(200).json(locData);
-    //         console.log(arrOfLocData);
-
-    //     });
-
 });
-let arrOfLocData = [];
 
 
 app.get('/weather', (req, res) => {
+    let lat = req.query.latitude;
+    let lon = req.query.longitude;
     const key = process.env.WEATHER_API_KEY;
 
-    let url = `https://api.weatherbit.io/v2.0/forecast/daily?lat=${arrOfLocData[0].latitude}&lon=${arrOfLocData[0].longitude}&key=${key}`;
+    let url = `https://api.weatherbit.io/v2.0/forecast/daily?lat=${lat}&lon=${lon}&key=${key}`;
+    // let url = `https://api.weatherbit.io/v2.0/forecast/daily?lat=${arrOfLocData[0].latitude}&lon=${arrOfLocData[0].longitude}&key=${key}`;
 
     superagent.get(url)
         .then((weatherGeoJSON) => {
@@ -108,8 +100,11 @@ app.get('/weather', (req, res) => {
 
 });
 app.get("/trails", (req, res) => {
+    let lat = req.query.latitude;
+    let lon = req.query.longitude;
     let trailskey = process.env.TRAIL_API_KEY;
-    let url = `https://www.hikingproject.com/data/get-trails?lat=${arrOfLocData[0].latitude}&lon=${arrOfLocData[0].longitude}&maxDistance=10&key=${trailskey}`;
+    let url = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&key=${trailskey}`;
+    // let url = `https://www.hikingproject.com/data/get-trails?lat=${arrOfLocData[0].latitude}&lon=${arrOfLocData[0].longitude}&maxDistance=10&key=${trailskey}`;
 
 
 
@@ -125,12 +120,45 @@ app.get("/trails", (req, res) => {
 
 
 
+app.get('/movies', (req, res) => {
+    let city = loc;
+    const key = process.env.MOVIE_API_KEY;
 
+
+    let URL = `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${city}`;
+    superagent.get(URL)
+        .then((moviesJSON) => {
+            let moviesArrOfObj = moviesJSON.body.results.map((singleMovie) => {
+                return new Movie(singleMovie);
+            });
+            res.status(200).json(moviesArrOfObj);
+            console.log(`LOGLOGLOG ${moviesArrOfObj}`)
+            // res.status(200).json(Movie.movies);
+        })
+
+});
+
+
+app.get('/yelp',(req,res)=>{
+
+    const key = process.env.YELP_API_KEY;
+    let url =  `https://api.yelp.com/v3/businesses/search`;
+    
+
+});
+Movie.movies = [];
+function Movie(obj) {
+    this.title = obj.title;
+    this.overview = obj.overview;
+    this.total_votes = obj.vote_count;
+    this.image_url = obj.poster_path;
+    this.popularity = obj.popularity;
+    this.released_on = obj.release_date;
+    Movie.movies.push(this);
+}
 
 function Location(location, locationInfoJSONFromUrl) {
-
     //properties to send as response 
-
     this.search_query = location;
     this.formatted_query = locationInfoJSONFromUrl[0].display_name;
     this.latitude = locationInfoJSONFromUrl[0].lat;
