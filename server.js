@@ -140,12 +140,30 @@ app.get('/movies', (req, res) => {
 
 
 app.get('/yelp',(req,res)=>{
-
+    const lat = req.query.latitude;
+    const lon = req.query.longitude;
     const key = process.env.YELP_API_KEY;
-    let url =  `https://api.yelp.com/v3/businesses/search`;
-    
+    let url =  `https://api.yelp.com/v3/businesses/search?latitude=${lat}&longitude=${lon}`;
+     superagent.get(url)
+    .set("Authorization", `Bearer ${key}`)
+    .then(data=>{      
+        let lecYelps=data.body.businesses.map(i=>{
+            return new Ylep(i);       
+        });
+        
+        res.status(200).json(lecYelps);
+    })
 
 });
+
+function Ylep(obj) {
+    this.name=obj.name;
+    this.image_url=obj.image_url;
+    this.price=obj.price;
+    this.rating=obj.rating;
+    this.url=obj.url;
+}
+
 Movie.movies = [];
 function Movie(obj) {
     this.title = obj.title;
